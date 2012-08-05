@@ -1,0 +1,28 @@
+#!/bin/bash
+
+[ ! -z "$TOOL_SETUP" ] && . "$TOOL_SETUP"
+
+printpids () {
+    echo "Name PID Alive"
+    for pidfile in $TOOL_HOME/var/run/*.pid; do
+        [ ! -e "$pidfile" ] && continue
+        pid=$(cat $pidfile 2>/dev/null)
+        if [ "$pid" != "" ]; then
+            if `kill -0 $pid`; then
+                echo "`basename $pidfile .pid` $pid 1"
+            else
+                echo "`basename $pidfile .pid` $pid 0"
+            fi
+        fi
+    done
+} 
+
+printpids | column -t
+
+# start_server $masterport master
+#
+# for node in {1..10}; do
+#    port=$(( $node + $baseport ))
+#    start_server $port node_${node}
+# done
+

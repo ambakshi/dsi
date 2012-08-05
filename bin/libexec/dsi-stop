@@ -1,0 +1,18 @@
+#!/bin/bash
+[ ! -z "$TOOL_SETUP" ] && . "$TOOL_SETUP"
+
+for node in {1..10}; do
+    stop_server_port `node_port $node` 2>/dev/null
+done
+stop_server_port $masterport 2>/dev/null
+
+for pidfile in $TOOL_HOME/var/run/*.pid; do
+    [ -e "$pidfile" ] || continue
+    pid=$(cat $pidfile 2>/dev/null)
+    [ "$pid" != "" ] || continue
+    stop_server_pid $pid
+    while [ -f $pidfile ]; do
+        sleep 1
+    done
+done
+

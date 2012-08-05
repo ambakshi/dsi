@@ -1,0 +1,15 @@
+#!/bin/bash
+[ ! -z "$TOOL_SETUP" ] && . "$TOOL_SETUP"
+
+start_server $masterport master
+
+for node in {1..10}; do
+    port=$(( $node + $baseport ))
+    start_server $port node_${node}
+    (
+    redis-cli -p $masterport sadd nodes ${node}
+    redis-cli -p $masterport set node:${node}:port $port
+    redis-cli -p $port set master:port $masterport
+    ) > /dev/null
+done
+

@@ -1,0 +1,44 @@
+if [ -e "/etc/${TOOL_EXE}.conf" ]; then
+    . "/etc/${TOOL_EXE}.conf"
+fi
+
+if [ -e "${TOOL_HOME}/.${TOOL_EXE}rc" ]; then
+    . "${TOOL_HOME}/.${TOOL_EXE}rc"
+fi
+
+masterport="${masterport:-6379}"
+baseport="${baseport:-6380}"
+
+node_port () {
+    echo $(( $baseport + $1 ))
+}
+
+start_server () {
+    local port=$1
+    local name=${2:-$port}
+    local dir="${TOOL_HOME}/var/lib/${name}"
+
+    info Starting $name on port $port
+    mkdir -p ${TOOL_HOME}/var/{run,log} || \
+        due 2 "Unable to creat run or log dir"
+    mkdir -p ${dir} || \
+        die 2 "Unable to create $dir"
+    redis-server --pidfile ${TOOL_HOME}/var/run/${name}.pid \
+                 --port $port \
+                 --dir ${dir} \
+                 --logfile ${TOOL_HOME}/var/log/${name}.log \
+                 --daemonize yes
+}
+
+stop_server_port () {
+    info Stopping server on port $1
+    redis-cli -p $1 shutdown nosave > /dev/null
+}
+
+stop_server_pid () {
+    local pid=$1
+    info Stopping server pid $pid
+    kill -SIGTERM $pid
+}
+
+# vim: set filetype=sh: 

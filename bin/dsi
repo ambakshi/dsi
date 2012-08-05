@@ -1,0 +1,83 @@
+#!/bin/bash
+
+export TOOL_EXE=$(basename $0)
+export TOOL_UPCASE=$(basename $0 | tr [a-z] [A-Z])
+export TOOL_BIN=$(cd "`dirname $0`" && pwd)
+export TOOL_LIBEXEC="$TOOL_BIN/libexec"
+# Create a var TOOL_HOME based on ${TOOL_UPCASE}_HOME
+eval export TOOL_HOME=\$${TOOL_UPCASE}_HOME
+if [ "$TOOL_HOME" = "" ]; then
+    export TOOL_HOME="$PWD"
+    export `echo \${TOOL_UPCASE}`_HOME=${PWD}
+fi
+
+if [ -e "$TOOL_LIBEXEC/$TOOL_EXE-setup" ]; then
+    export TOOL_SETUP="$TOOL_LIBEXEC/$TOOL_EXE-setup"
+fi
+
+export PATH="$PATH:$TOOL_BIN:$TOOL_LIBEXEC"
+
+now () {
+    date +"%m/%y/%d %H:%M"
+}
+
+log () {
+    local lvl=$1
+    shift
+    echo >&2 "$(now) [$BASHPID] $lvl: $*"
+    echo "$(now) [$BASHPID] $lvl: $*" >> ${TOOL_HOME}/var/log/${TOOL_EXE}.log
+}
+
+info () {
+    log INFO "$*"
+}
+
+verbose () {
+    [ "$VERBOSE" != "" ] && \
+        log VERBOSE "$*"
+}
+
+die () {
+    local rc=$1
+    shift
+    log "ERROR: $rc" "$*"
+    exit $rc
+}
+
+export -f info verbose die now log
+
+if [ $# -eq 0 -o "$1" = "help" ]; then
+    if [ "$2" != "" ]; then
+        $TOOL_EXE $2 --help
+        exit $?
+    fi
+    echo >&2 "  $TOOL_EXE:"
+    for f in $TOOL_LIBEXEC/$TOOL_EXE-*; do
+        if [ -x "$f" ]; then
+            echo -e >&2 "\t$(basename $f)"
+        fi
+    done
+    exit 0
+fi
+
+tryexec () {
+    local cmd="$TOOL_EXE" count=$1
+    shift
+    for j in `seq 1 $count`; do
+        cmd="$cmd-$1"
+        shift
+    done
+    local exe="$(which $cmd 2>/dev/null)"
+    if [ $? -eq 0 -a "$exe" != "" ]; then
+        "$exe" "$*"
+        exit $?
+    fi
+}
+
+for i in `seq $# -1 1`; do
+    tryexec $i $*
+done
+
+echo >&2 "ERROR: $TOOL_EXE-$1 not found."
+exit 2
+
